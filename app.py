@@ -31,7 +31,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 
 @app.route("/")
-def index():
+def home():
     return "<h1>ClaMal App Demo!</h1>"
 
 @app.route("/about")
