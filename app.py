@@ -8,6 +8,7 @@ import tensorflow as tf
 from werkzeug.utils import secure_filename
 from keras.preprocessing import image
 import time
+from flask_cors import CORS  # Import CORS
 
 # Load the TensorFlow Lite model
 interpreter = tf.lite.Interpreter(model_path='androzoo_model_binary.tflite')
@@ -19,6 +20,7 @@ output_details = interpreter.get_output_details()
 
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app)
 
 # Directory to save uploaded APK files and output images
 UPLOAD_FOLDER = './uploads'
@@ -31,6 +33,10 @@ app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 @app.route("/")
 def index():
     return "<h1>ClaMal App Demo!</h1>"
+
+@app.route("/about")
+def index():
+    return "<h1>Hello! My name is Pham Nhat Duy and I build this app to demo my Master's Thesis.</h1>"
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
