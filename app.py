@@ -19,13 +19,48 @@ import matplotlib.pyplot as plt
 import math
 import sys
 
-# Load the TensorFlow Lite model
-interpreter = tf.lite.Interpreter(model_path='androzoo_model_binary.tflite')
-interpreter.allocate_tensors()
+from huggingface_hub import from_pretrained_keras
+model = from_pretrained_keras("duypn99/uitObfAMC12Class")
+infer = model.signatures['serving_default']
 
-# Get input and output tensors
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+class_names = ['Mã độc quảng cáo', 'Mã độc ngân hàng', 'Ứng dụng lành tính', 'Mã độc', 'Mã độc quảng cáo bị làm rối mã nguồn', 'Mã độc ngân hàng bị làm rối mã nguồn', 'Ứng dụng lành tính bị làm rối mã nguồn', 'Mã độc bị làm rối mã nguồn', 'Mã độc rủi ro bị làm rối mã nguồn', 'Mã độc SMS bị làm rối mã nguồn', 'Mã độc rủi ro', 'Mã độc SMS']
+
+def classify_image(image_path):
+    test_image = image.load_img(image_path, target_size=(224, 224))
+    test_image = image.img_to_array(test_image)
+    test_image = np.expand_dims(test_image, axis=0)
+
+    # Convert the image to a tensor
+    input_tensor = tf.convert_to_tensor(test_image)
+
+    # Prepare the input for the serving function (as a dictionary)
+    input_data = {"inputs": input_tensor}
+
+    # Make a prediction
+    prediction = infer(**input_data)
+    output_tensor = prediction['output_0']
+
+    # Convert tensor to numpy array
+    output_array = output_tensor.numpy()
+
+    # Find the index of the class with the highest probability
+    predicted_class_index = np.argmax(output_array, axis=-1)
+    probability = output_array[0, predicted_class_index[0]]
+
+    prediction = {
+        "class": class_names[predicted_class_index[0]],
+        "confidence": 100 * probability
+    }
+
+    return prediction
+
+# # Load the TensorFlow Lite model
+# interpreter = tf.lite.Interpreter(model_path='androzoo_model_binary.tflite')
+# interpreter.allocate_tensors()
+
+# # Get input and output tensors
+# input_details = interpreter.get_input_details()
+# output_details = interpreter.get_output_details()
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -41,11 +76,20 @@ app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 
 @app.route("/")
 def home():
-    return "<h1>ClaMal App Demo!</h1>"
+    # test_img_path = '0ae6dd4d3d7c4710ae726ff7c3d64441be44b83cf9aa0ef29ddad40a22d68f29_obfuscated.apk.jpg'
+    # result = classify_image(test_img_path)
+
+    # response = {
+    #     "Dự đoán": result['class'],
+    #     "Độ tự tin": f"{result['confidence']:.10f}%"
+    # }
+
+    # return response
+    return "<h1>uitObfAMC - An Obfuscated Android Malware Classification System!</h1>"
 
 @app.route("/about")
 def about():
-    return "<h1>Hello! My name is Pham Nhat Duy and I build this app to demo my Master's Thesis.</h1>"
+    return "<h1>Contact me: duypn@uit.edu.vn</h1>"
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -68,7 +112,13 @@ def upload_file():
         # Classify the image
         result = classify_image(image_path)
 
-        return jsonify({'result': result})
+        response = {
+            "Dự đoán": result['class'],
+            "Độ tự tin": f"{result['confidence']:.10f}%"
+        }
+
+        return response
+        # return jsonify({'result': result})
 
 def compute_glmi(grayscale_image):
     grayscale_image_np = np.array(grayscale_image)
@@ -187,34 +237,34 @@ def convert_apk_to_image(apk_path, output_folder_path):
     image_path = os.path.join(output_folder_path, base_filename, '_Fused.jpg')
     return image_path
 
-def classify_image(image_path):
-    # Prepare the input data
-    input_data = image.load_img(image_path, target_size=(299, 299))
-    input_data = image.img_to_array(input_data)
-    input_data = np.expand_dims(input_data, axis = 0)
+# def classify_image(image_path):
+#     # Prepare the input data
+#     input_data = image.load_img(image_path, target_size=(299, 299))
+#     input_data = image.img_to_array(input_data)
+#     input_data = np.expand_dims(input_data, axis = 0)
 
-    # Set the input tensor and run inference
-    interpreter.set_tensor(input_details[0]['index'], input_data)
-    interpreter.invoke()
+#     # Set the input tensor and run inference
+#     interpreter.set_tensor(input_details[0]['index'], input_data)
+#     interpreter.invoke()
 
-    # Get the output tensor and process the output
-    output_data = interpreter.get_tensor(output_details[0]['index'])
-    probability = output_data[0][0]
+#     # Get the output tensor and process the output
+#     output_data = interpreter.get_tensor(output_details[0]['index'])
+#     probability = output_data[0][0]
 
-    # Interpret the result
-    threshold = 0.5  # Common threshold for binary classification
-    if probability > threshold:
-        predicted_class = 1
-    else:
-        predicted_class = 0
+#     # Interpret the result
+#     threshold = 0.5  # Common threshold for binary classification
+#     if probability > threshold:
+#         predicted_class = 1
+#     else:
+#         predicted_class = 0
 
-    # Print detailed prediction
-    class_names = ['Benign', 'Malware']
-    probability = probability if (probability > 0.5) else (1 - probability)
-    result = "This image most likely belongs to {} with a {:.2f}% confidence.".format(class_names[predicted_class], 100 * probability)
-    print(result)
+#     # Print detailed prediction
+#     class_names = ['Benign', 'Malware']
+#     probability = probability if (probability > 0.5) else (1 - probability)
+#     result = "This app most likely belongs to {} with a {:.4f}% confidence.".format(class_names[predicted_class], 100 * probability)
+#     print(result)
 
-    return str(result)
+#     return str(result)
 
 if __name__ == '__main__':
     # app.run(debug=True)
